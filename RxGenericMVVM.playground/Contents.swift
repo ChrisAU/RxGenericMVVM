@@ -54,29 +54,24 @@ class PersonProvider {
 struct PersonViewModel: ViewModel {
     typealias T = Person
     private let model: Variable<T>
-    private let disposeBag = DisposeBag()
     private var provider: PersonProvider!
     
     let title: String = "Person Details"
     
     let nameHeading: String = "Name"
-    let name = Variable<String>("")
+    let name: Observable<String>
     
     let addressHeading: String = "Address"
-    let address = Variable<String>("")
+    let address: Observable<String>
     
     init(model: T) {
         self.model = Variable<T>(model)
         
-        let driver = self.model.asDriver()
+        name = self.model.asObservable()
+            .map { "\($0.title) \($0.firstName) \($0.lastName)" }
         
-        driver.map ({ "\($0.title) \($0.firstName) \($0.lastName)" })
-            .drive(name)
-            .addDisposableTo(disposeBag)
-        
-        driver.map ({ "\($0.address)\n\($0.city)\n\($0.postcode)\n\($0.country)" })
-            .drive(address)
-            .addDisposableTo(disposeBag)
+        address = self.model.asObservable()
+            .map ({ "\($0.address)\n\($0.city)\n\($0.postcode)\n\($0.country)" })
     }
     
     init(provider: PersonProvider) {
@@ -119,12 +114,12 @@ final class PersonView: UIView, View {
         self.viewModel = viewModel
         super.init(frame: .zero)
         
-        viewModel.name.asObservable()
+        viewModel.name
             .map({ PersonView.makeAttributedHeading(viewModel.nameHeading, text: $0) })
             .bindTo(nameLabel.rx.attributedText)
             .addDisposableTo(disposeBag)
         
-        viewModel.address.asObservable()
+        viewModel.address
             .map({ PersonView.makeAttributedHeading(viewModel.addressHeading, text: $0) })
             .bindTo(addressLabel.rx.attributedText)
             .addDisposableTo(disposeBag)
